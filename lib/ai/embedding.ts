@@ -34,13 +34,26 @@ export const generateEmbedding = async (value: string): Promise<number[]> => {
 };
 
 export const findRelevantContent = async (userQuery: string) => {
+  // Convert user's question into a vector
   const userQueryEmbedded = await generateEmbedding(userQuery);
-  const similarity = sql<number>`1 - (${cosineDistance(embeddings.embedding, userQueryEmbedded)})`;
+
+  // Calculate cosine similarity between query vector and all stored vectors
+  // 1 - cosineDistance gives us similarity score (1 = identical, 0 = unrelated)
+  const similarity = sql<number>`1 - (${cosineDistance(
+    embeddings.embedding, 
+    userQueryEmbedded
+  )})`;
+
+  // Query the database
   const similarGuides = await db
-    .select({ name: embeddings.content, similarity })
+    .select({ 
+      name: embeddings.content,    // Get the text content
+      similarity                   // Get the similarity score
+    })
     .from(embeddings)
-    .where(gt(similarity, 0.3))
-    .orderBy((t) => desc(t.similarity))
-    .limit(4);
+    .where(gt(similarity, 0.3))    // Only return results with >30% similarity
+    .orderBy((t) => desc(t.similarity))  // Most similar first
+    .limit(4);                     // Get top 4 results
+
   return similarGuides;
 };
