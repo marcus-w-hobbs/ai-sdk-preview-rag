@@ -14,13 +14,28 @@ import { toast } from "sonner";
 
 export default function Chat() {
   const [toolCall, setToolCall] = useState<string>();
+  const [isToolCallInProgress, setIsToolCallInProgress] = useState(false);
+  
   const { messages, input, handleInputChange, handleSubmit, isLoading } =
     useChat({
       maxSteps: 4,
       onToolCall({ toolCall }) {
-        setToolCall(toolCall.toolName);
+        if (!isToolCallInProgress) {
+          setIsToolCallInProgress(true)
+          setToolCall(toolCall.toolName);
+        }
+      },
+      onFinish(message) {
+        setIsToolCallInProgress(false)
+        setToolCall(undefined)
+      },
+      onResponse(response) {
+        // Keep empty to preserve hook structure
       },
       onError: (error) => {
+        console.error('Chat Error:', error)
+        setIsToolCallInProgress(false)
+        setToolCall(undefined)
         toast.error("You've been rate limited, please try again later!");
       },
     });
