@@ -45,4 +45,10 @@ To get the project up and running, follow these steps:
    npm run dev
    ```
 
+6. Use the Drizzle Studio to manage data in the database:
+   ```bash
+   npm run db:studio
+   # Drizzle Studio is up and running on https://local.drizzle.studio
+   ```
+
 Your project should now be running on [http://localhost:3000](http://localhost:3000).
