@@ -1,9 +1,9 @@
 ---
-description:
-globs:
+description: Best practices for Next.js applications and routing
+globs: **/*.{ts,tsx}
 ---
 
-# Your rule content
-
-- You can @ files here
-- You can use markdown but dont have to
+- Use the App Router for improved performance and simpler data fetching
+- Implement proper error boundaries to handle runtime errors gracefully
+- Utilize Next.js built-in optimizations like code splitting and image optimization
+- Leverage Next.js API routes for server-side logic and data fetching
