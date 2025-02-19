@@ -11,10 +11,12 @@ Directory structure:
     ├── requirements.txt
     ├── tailwind.config.ts
     ├── tsconfig.json
-    ├── .cursorrules
     ├── .env.example
     ├── .eslintrc.json
     ├── app/
+    │   ├── globals.css
+    │   ├── layout.tsx
+    │   ├── page.tsx
     │   ├── (preview)/
     │   │   ├── globals.css
     │   │   ├── layout.tsx
@@ -43,7 +45,11 @@ Directory structure:
     │   │   │   └── route.ts
     │   │   └── sources/
     │   │       └── route.ts
-    │   └── content/
+    │   ├── content/
+    │   │   ├── layout.tsx
+    │   │   └── page.tsx
+    │   └── preview/
+    │       ├── globals.css
     │       ├── layout.tsx
     │       └── page.tsx
     ├── components/
@@ -107,4 +113,15 @@ Directory structure:
     │   │   └── pdf-parse.d.ts
     │   └── validations/
     │       └── content.ts
-    └── public/
+    ├── public/
+    └── .cursor/
+        └── rules/
+            ├── drizzle-orm-best-practices.mdc
+            ├── general-coding-standards.mdc
+            ├── nextjs-best-practices.mdc
+            ├── openai-best-practices.mdc
+            ├── radix-ui-best-practices.mdc
+            ├── react-best-practices.mdc
+            ├── tailwindcss-best-practices.mdc
+            ├── typescript-best-practices.mdc
+            └── zod-best-practices.mdc

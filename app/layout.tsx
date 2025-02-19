@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "./preview/globals.css";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "AI SDK Preview RAG",
@@ -12,8 +12,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className="h-full">
+      <body className="min-h-screen bg-gray-50">
+        {children}
+      </body>
     </html>
   );
 } 
