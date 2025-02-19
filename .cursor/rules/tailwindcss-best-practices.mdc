@@ -1,0 +1,10 @@
+---
+name: tailwindcss-best-practices.mdc
+description: Best practices for using Tailwind CSS in your project
+globs: **/*.{ts,tsx,css}
+---
+
+- Use utility-first approach for styling components
+- Create custom utility classes for frequently used styles
+- Utilize Tailwind's responsive design classes for mobile-first development
+- Implement dark mode using Tailwind's built-in classes 

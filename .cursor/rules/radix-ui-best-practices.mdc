@@ -1,0 +1,10 @@
+---
+name: radix-ui-best-practices.mdc
+description: Best practices for using Radix UI components
+globs: **/*.{ts,tsx}
+---
+
+- Use Radix UI primitives as building blocks for custom components
+- Follow Radix UI's accessibility guidelines for all components
+- Utilize Radix UI's state management hooks for controlled components
+- Customize Radix UI components using the `asChild` prop for better flexibility 

@@ -1,0 +1,10 @@
+---
+name: zod-best-practices.mdc
+description: Best practices for using Zod for runtime type checking and validation
+globs: **/*.{ts,tsx}
+---
+
+- Use Zod schemas for input validation in API routes and forms
+- Implement custom error messages for better user feedback
+- Utilize Zod's type inference for TypeScript integration
+- Use Zod's `superRefine` for complex validation logic 

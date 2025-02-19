@@ -1,0 +1,10 @@
+---
+name: typescript-best-practices.mdc
+description: TypeScript coding standards and type safety guidelines
+globs: **/*.{ts,tsx}
+---
+
+- Enable strict mode in your tsconfig.json for better type checking
+- Use type aliases for complex types to improve readability
+- Implement proper type guards for runtime type checking
+- Utilize utility types like `Partial`, `Readonly`, and `Pick` for type manipulation 

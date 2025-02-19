@@ -1,0 +1,10 @@
+---
+name: openai-best-practices.mdc
+description: Best practices for using the OpenAI API
+globs: **/*.{ts,tsx}
+---
+
+- Implement proper error handling and rate limiting for API requests
+- Use streaming responses for better performance in long-running tasks
+- Cache API responses where appropriate to reduce costs and improve performance
+- Implement proper security measures for handling API keys and sensitive data 
