@@ -17,6 +17,14 @@ Directory structure:
     │   ├── globals.css
     │   ├── layout.tsx
     │   ├── page.tsx
+    │   ├── (preview)/
+    │   │   ├── globals.css
+    │   │   ├── layout.tsx
+    │   │   ├── page.tsx
+    │   │   ├── uncut-sans.woff2
+    │   │   └── api/
+    │   │       └── chat/
+    │   │           └── route.ts
     │   ├── api/
     │   │   ├── categories/
     │   │   │   └── route.ts
@@ -41,6 +49,7 @@ Directory structure:
     │   │   ├── layout.tsx
     │   │   └── page.tsx
     │   └── preview/
+    │       ├── globals.css
     │       ├── layout.tsx
     │       └── page.tsx
     ├── components/
