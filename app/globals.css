@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Test styles */
+.test-banner {
+  background-color: red !important;
+  color: white !important;
+  font-size: 24px !important;
+} 

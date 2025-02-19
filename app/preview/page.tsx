@@ -28,33 +28,6 @@ export default function Chat() {
     if (messages.length > 0) setIsExpanded(true);
   }, [messages]);
 
-  useEffect(() => {
-    const container = document.querySelector('[data-testid="main-container"]') as HTMLElement;
-    const form = document.querySelector('[data-testid="chat-form"]') as HTMLElement;
-    const input = document.querySelector('[data-testid="chat-input"]') as HTMLElement;
-    
-    if (container && form && input) {
-      console.log('Container styles:', {
-        width: container.offsetWidth,
-        paddingLeft: window.getComputedStyle(container).paddingLeft,
-        paddingRight: window.getComputedStyle(container).paddingRight,
-        maxWidth: window.getComputedStyle(container).maxWidth
-      });
-      
-      console.log('Form styles:', {
-        width: form.offsetWidth,
-        paddingLeft: window.getComputedStyle(form).paddingLeft,
-        paddingRight: window.getComputedStyle(form).paddingRight
-      });
-      
-      console.log('Input styles:', {
-        width: input.offsetWidth,
-        paddingLeft: window.getComputedStyle(input).paddingLeft,
-        paddingRight: window.getComputedStyle(input).paddingRight
-      });
-    }
-  }, []);
-
   const awaitingResponse = useMemo(() => {
     return isLoading && messages.slice(-1)[0]?.role === "user";
   }, [isLoading, messages]);
@@ -156,4 +129,4 @@ const MemoizedReactMarkdown: React.FC<Options> = React.memo(
   (prevProps, nextProps) =>
     prevProps.children === nextProps.children &&
     prevProps.className === nextProps.className,
-);
+); 
