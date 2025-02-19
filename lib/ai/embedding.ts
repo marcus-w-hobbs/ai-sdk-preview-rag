@@ -1,10 +1,14 @@
-import { embed, embedMany } from "ai";
-import { openai } from "@ai-sdk/openai";
-import { cosineDistance, desc, gt, sql } from "drizzle-orm";
-import { embeddings } from "../db/schema/embeddings";
-import { db } from "../db";
+import { OpenAI } from "openai"
+import { desc, gt, sql } from "drizzle-orm"
+import { embeddings } from "../db/schema/embeddings"
+import { db } from "../db"
+import { env } from "@/lib/env.mjs"
 
-const embeddingModel = openai.embedding("text-embedding-ada-002");
+const openai = new OpenAI({
+  apiKey: env.OPENAI_API_KEY,
+  maxRetries: 3,
+  timeout: 30000,
+})
 
 const MIN_CHUNK_LENGTH = 3
 const MIN_WORDS_PER_CHUNK = 5
@@ -101,36 +105,116 @@ const generateChunks = (input: string): string[] => {
   return chunks
 }
 
+const BATCH_SIZE = 25 // Reduced from 100 to 25
+const MIN_BACKOFF = 1000 // 1 second
+const MAX_BACKOFF = 300000 // 5 minutes
+const REQUEST_DELAY = 50 // 50ms between requests
+
+async function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function getBackoffTime(retryCount: number): Promise<number> {
+  const backoff = Math.min(
+    MAX_BACKOFF,
+    MIN_BACKOFF * Math.pow(2, retryCount)
+  )
+  // Add jitter
+  return backoff * (0.75 + Math.random() * 0.5)
+}
+
+async function processBatch(chunks: string[], startIdx: number): Promise<Array<{ embedding: number[]; content: string }>> {
+  const batch = chunks.slice(startIdx, startIdx + BATCH_SIZE)
+  console.warn(`🔄 Processing batch starting at ${startIdx}, size: ${batch.length}`)
+  
+  const results = []
+  for (let i = 0; i < batch.length; i++) {
+    let retryCount = 0
+    while (true) {
+      try {
+        console.warn(`📊 Processing chunk ${startIdx + i + 1}/${chunks.length}`)
+        const response = await openai.embeddings.create({
+          model: "text-embedding-ada-002",
+          input: batch[i],
+        })
+        results.push({
+          content: batch[i],
+          embedding: response.data[0].embedding,
+        })
+        break // Success, exit retry loop
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message.includes('rate limit')) {
+            retryCount++
+            const backoff = await getBackoffTime(retryCount)
+            console.warn(`⏳ Rate limit hit, backing off for ${Math.round(backoff/1000)}s (attempt ${retryCount})...`)
+            await sleep(backoff)
+            continue // Retry after backoff
+          }
+        }
+        throw error // Non-rate-limit error, rethrow
+      }
+    }
+    // Delay between successful requests
+    await sleep(REQUEST_DELAY)
+  }
+  return results
+}
+
 export const generateEmbeddings = async (
   value: string,
 ): Promise<Array<{ embedding: number[]; content: string }>> => {
-  const chunks = generateChunks(value);
-  const { embeddings } = await embedMany({
-    model: embeddingModel,
-    values: chunks,
-  });
-  return embeddings.map((e, i) => ({ content: chunks[i], embedding: e }));
-};
+  const chunks = generateChunks(value)
+  console.warn('🔄 Generating embeddings for chunks:', { count: chunks.length })
+  
+  try {
+    const allResults = []
+    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+      const batchResults = await processBatch(chunks, i)
+      allResults.push(...batchResults)
+      // Add a larger delay between batches
+      if (i + BATCH_SIZE < chunks.length) {
+        console.warn('😴 Pausing between batches...')
+        await sleep(2000) // 2 second delay between batches
+      }
+    }
+    
+    console.warn('✅ Successfully generated embeddings for all chunks')
+    return allResults
+  } catch (error) {
+    console.error('❌ Embedding generation failed:', error)
+    throw error
+  }
+}
 
 export const generateEmbedding = async (value: string): Promise<number[]> => {
-  const input = value.replaceAll("\n", " ");
-  const { embedding } = await embed({
-    model: embeddingModel,
-    value: input,
-  });
-  return embedding;
-};
+  const input = value.replaceAll("\n", " ")
+  try {
+    const response = await openai.embeddings.create({
+      model: "text-embedding-ada-002",
+      input,
+    })
+    return response.data[0].embedding
+  } catch (error) {
+    console.error('❌ Single embedding generation failed:', error)
+    if (error instanceof Error) {
+      if (error.message.includes('EADDRNOTAVAIL')) {
+        throw new Error('Failed to connect to OpenAI API. Please check your network connection and API key.')
+      }
+      if (error.message.includes('rate limit')) {
+        throw new Error('OpenAI API rate limit reached. Please try again in a few minutes.')
+      }
+    }
+    throw error
+  }
+}
 
 export const findRelevantContent = async (userQuery: string) => {
   // Convert user's question into a vector
-  const userQueryEmbedded = await generateEmbedding(userQuery);
+  const userQueryEmbedded = await generateEmbedding(userQuery)
 
-  // Calculate cosine similarity between query vector and all stored vectors
-  // 1 - cosineDistance gives us similarity score (1 = identical, 0 = unrelated)
-  const similarity = sql<number>`1 - (${cosineDistance(
-    embeddings.embedding, 
-    userQueryEmbedded
-  )})`;
+  // Calculate cosine similarity using the vector_cosine_ops operator
+  const similarity = sql<number>`1 - (${embeddings.embedding} <=> ${sql`array[${userQueryEmbedded}]::float4[]`})`
 
   // Query the database
   const similarGuides = await db
@@ -141,7 +225,7 @@ export const findRelevantContent = async (userQuery: string) => {
     .from(embeddings)
     .where(gt(similarity, 0.3))    // Only return results with >30% similarity
     .orderBy((t) => desc(t.similarity))  // Most similar first
-    .limit(4);                     // Get top 4 results
+    .limit(4)                     // Get top 4 results
 
-  return similarGuides;
-};
+  return similarGuides
+}

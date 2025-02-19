@@ -1,0 +1,45 @@
+I want to extend my local RAG application with comprehensive content ingestion. Please help me implement:
+
+1. Content Ingestion Service:
+- PDF parsing using pdf-parse
+- Markdown parsing using marked
+- URL scraping using @extractus/article-extractor
+- Batch processing with queue management
+- File system watching for auto-import
+
+2. Database Schema Extensions:
+- Content categorization
+- Source tracking
+- Metadata storage
+- File type handling
+- Processing status
+
+3. API Routes:
+- /api/ingest/pdf
+- /api/ingest/markdown
+- /api/ingest/url
+- /api/ingest/batch
+- /api/categories
+- /api/sources
+
+4. UI Components:
+- Drag-and-drop file upload
+- URL submission form
+- Batch import interface
+- Category management
+- Source overview
+- Processing status display
+
+5. Browser Extension:
+- Quick save button
+- Context menu integration
+- Page metadata extraction
+- Authentication with local server
+
+Please provide a step-by-step implementation, focusing on:
+- TypeScript types and interfaces
+- Database migrations
+- API route handlers
+- UI components
+- Error handling
+- Progress tracking

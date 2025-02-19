@@ -1,30 +1,49 @@
 "use server";
 
-import {
-  NewResourceParams,
-  insertResourceSchema,
-  resources,
-} from "@/lib/db/schema/resources";
-import { generateEmbeddings } from "../ai/embedding";
 import { db } from "../db";
-import { embeddings as embeddingsTable } from "../db/schema/embeddings";
+import { generateEmbeddings } from "../ai/embedding";
+import { sources, contentItems } from "@/lib/db/schema/content";
+import { embeddings } from "@/lib/db/schema/embeddings";
+import { eq } from "drizzle-orm";
 
-export const createResource = async (input: NewResourceParams) => {
+export const createResource = async (input: { content: string }) => {
   try {
-    const { content } = insertResourceSchema.parse(input);
-
-    const [resource] = await db
-      .insert(resources)
-      .values({ content })
+    // Create source record
+    const [source] = await db
+      .insert(sources)
+      .values({
+        name: "Chat Input",
+        type: "markdown",
+        metadata: {}
+      })
       .returning();
 
-    const embeddings = await generateEmbeddings(content);
-    await db.insert(embeddingsTable).values(
-      embeddings.map((embedding) => ({
-        resourceId: resource.id,
+    // Create content item
+    const [contentItem] = await db
+      .insert(contentItems)
+      .values({
+        sourceId: source.id,
+        title: "Chat Input",
+        content: input.content,
+        status: "processing"
+      })
+      .returning();
+
+    // Generate and store embeddings
+    const embeddingResults = await generateEmbeddings(input.content);
+    await db.insert(embeddings).values(
+      embeddingResults.map((embedding) => ({
+        contentId: contentItem.id,
         ...embedding,
-      })),
+      }))
     );
+
+    // Update content item status
+    await db
+      .update(contentItems)
+      .set({ status: "completed" })
+      .where(eq(contentItems.id, contentItem.id));
+
     return "Resource successfully created and embedded.";
   } catch (error) {
     return error instanceof Error && error.message.length > 0

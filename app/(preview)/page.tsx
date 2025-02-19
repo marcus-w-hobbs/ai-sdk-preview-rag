@@ -13,30 +13,12 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function Chat() {
-  const [toolCall, setToolCall] = useState<string>();
-  const [isToolCallInProgress, setIsToolCallInProgress] = useState(false);
-  
   const { messages, input, handleInputChange, handleSubmit, isLoading } =
     useChat({
-      maxSteps: 4,
-      onToolCall({ toolCall }) {
-        if (!isToolCallInProgress) {
-          setIsToolCallInProgress(true)
-          setToolCall(toolCall.toolName);
-        }
-      },
-      onFinish(message) {
-        setIsToolCallInProgress(false)
-        setToolCall(undefined)
-      },
-      onResponse(response) {
-        // Keep empty to preserve hook structure
-      },
+      api: "/api/chat",
       onError: (error) => {
         console.error('Chat Error:', error)
-        setIsToolCallInProgress(false)
-        setToolCall(undefined)
-        toast.error("You've been rate limited, please try again later!");
+        toast.error("An error occurred. Please try again later!");
       },
     });
 
@@ -46,26 +28,9 @@ export default function Chat() {
     if (messages.length > 0) setIsExpanded(true);
   }, [messages]);
 
-  const currentToolCall = useMemo(() => {
-    const tools = messages?.slice(-1)[0]?.toolInvocations;
-    if (tools && toolCall === tools[0].toolName) {
-      return tools[0].toolName;
-    } else {
-      return undefined;
-    }
-  }, [toolCall, messages]);
-
   const awaitingResponse = useMemo(() => {
-    if (
-      isLoading &&
-      currentToolCall === undefined &&
-      messages.slice(-1)[0].role === "user"
-    ) {
-      return true;
-    } else {
-      return false;
-    }
-  }, [isLoading, currentToolCall, messages]);
+    return isLoading && messages.slice(-1)[0]?.role === "user";
+  }, [isLoading, messages]);
 
   const userQuery: Message | undefined = messages
     .filter((m) => m.role === "user")
@@ -78,8 +43,8 @@ export default function Chat() {
   return (
     <div className="flex justify-center items-start sm:pt-16 min-h-screen w-full dark:bg-neutral-900 px-4 md:px-0 py-4">
       <div className="flex flex-col items-center w-full max-w-[500px]">
-      <ProjectOverview />
-      <motion.div
+        <ProjectOverview />
+        <motion.div
           animate={{
             minHeight: isExpanded ? 200 : 0,
             padding: isExpanded ? 12 : 0,
@@ -113,17 +78,17 @@ export default function Chat() {
               className="min-h-fit flex flex-col gap-2"
             >
               <AnimatePresence>
-                {awaitingResponse || currentToolCall ? (
+                {awaitingResponse ? (
                   <div className="px-2 min-h-12">
                     <div className="dark:text-neutral-400 text-neutral-500 text-sm w-fit mb-1">
-                      {userQuery.content}
+                      {userQuery?.content}
                     </div>
-                    <Loading tool={currentToolCall} />
+                    <Loading />
                   </div>
                 ) : lastAssistantMessage ? (
                   <div className="px-2 min-h-12">
                     <div className="dark:text-neutral-400 text-neutral-500 text-sm w-fit mb-1">
-                      {userQuery.content}
+                      {userQuery?.content}
                     </div>
                     <AssistantMessage message={lastAssistantMessage} />
                   </div>
@@ -160,14 +125,7 @@ const AssistantMessage = ({ message }: { message: Message | undefined }) => {
   );
 };
 
-const Loading = ({ tool }: { tool?: string }) => {
-  const toolName =
-    tool === "getInformation"
-      ? "Getting information"
-      : tool === "addResource"
-        ? "Adding information"
-        : "Thinking";
-
+const Loading = () => {
   return (
     <AnimatePresence mode="wait">
       <motion.div
@@ -182,7 +140,7 @@ const Loading = ({ tool }: { tool?: string }) => {
             <LoadingIcon />
           </div>
           <div className="text-neutral-500 dark:text-neutral-400 text-sm">
-            {toolName}...
+            Thinking...
           </div>
         </div>
       </motion.div>

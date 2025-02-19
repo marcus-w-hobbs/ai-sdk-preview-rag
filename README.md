@@ -51,4 +51,6 @@ To get the project up and running, follow these steps:
    # Drizzle Studio is up and running on https://local.drizzle.studio
    ```
 
+7. See @requirements.txt for the additional requirements of the project beyond it's initial scope.
+
 Your project should now be running on [http://localhost:3000](http://localhost:3000).
