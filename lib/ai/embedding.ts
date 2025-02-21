@@ -213,9 +213,18 @@ export const findRelevantContent = async (userQuery: string) => {
   // Convert user's question into a vector
   const userQueryEmbedded = await generateEmbedding(userQuery)
 
-  // Calculate cosine similarity using the vector_cosine_ops operator
-  const similarity = sql<number>`1 - (${embeddings.embedding} <=> ${sql`array[${userQueryEmbedded}]::float4[]`})`
+  console.log('Checking for direct content matches...');
+  const directMatches = await db
+    .select({ content: embeddings.content })
+    .from(embeddings)
+    .where(sql`${embeddings.content} ILIKE ${`%${userQuery}%`}`);
+  
+  console.log('Direct matches:', directMatches);
 
+  // Calculate cosine similarity using the vector_cosine_ops operator
+  const similarity = sql<number>`1 - (${embeddings.embedding} <=> ${sql.raw(`'[${userQueryEmbedded.join(',')}]'::vector`)})`
+
+  console.log('Executing vector similarity search...');
   // Query the database
   const similarGuides = await db
     .select({ 
@@ -223,9 +232,11 @@ export const findRelevantContent = async (userQuery: string) => {
       similarity                   // Get the similarity score
     })
     .from(embeddings)
-    .where(gt(similarity, 0.3))    // Only return results with >30% similarity
+    .where(gt(similarity, 0.1))    // Lower threshold to 10% similarity
     .orderBy((t) => desc(t.similarity))  // Most similar first
-    .limit(4)                     // Get top 4 results
+    .limit(4);                     // Get top 4 results
 
-  return similarGuides
+  console.log('Vector similarity results:', similarGuides);
+
+  return similarGuides.length > 0 ? similarGuides : directMatches.map(m => ({ name: m.content, similarity: 1 }));
 }

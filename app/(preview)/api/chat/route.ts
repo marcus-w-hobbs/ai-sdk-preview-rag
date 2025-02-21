@@ -150,6 +150,27 @@ export async function POST(req: Request) {
                 rawArguments: accumulatedArguments
               });
             }
+          } else if (currentToolCall === 'getInformation') {
+            try {
+              const params = JSON.parse(accumulatedArguments);
+              console.log('Searching for information:', params);
+              const relevantContent = await findRelevantContent(params.question);
+              console.log('Found relevant content:', relevantContent);
+              
+              // Stream the found information back to the model
+              if (relevantContent && relevantContent.length > 0) {
+                controller.enqueue('Based on the stored information: ');
+                controller.enqueue(relevantContent[0].name);
+              } else {
+                controller.enqueue('I don\'t have any information about that in my knowledge base.');
+              }
+            } catch (error) {
+              console.error('Error processing getInformation tool call:', {
+                error,
+                rawArguments: accumulatedArguments
+              });
+              controller.enqueue('Sorry, I encountered an error while retrieving information.');
+            }
           }
           
           // Reset for next tool call
