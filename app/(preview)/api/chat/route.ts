@@ -109,54 +109,38 @@ export async function POST(req: Request) {
       let accumulatedArguments = '';
       
       for await (const chunk of response) {
-        console.log('Processing chunk:', {
-          hasToolCalls: !!chunk.choices[0]?.delta?.tool_calls,
-          hasContent: !!chunk.choices[0]?.delta?.content,
-          finishReason: chunk.choices[0]?.finish_reason
-        });
 
         if (chunk.choices[0]?.delta?.tool_calls) {
           const toolCall = chunk.choices[0].delta.tool_calls[0];
           
           // Start of a new tool call
           if (toolCall.function?.name) {
-            console.log('Starting new tool call:', toolCall.function.name);
             currentToolCall = toolCall.function.name;
             accumulatedArguments = toolCall.function.arguments || '';
           } 
           // Continuation of current tool call
           else if (toolCall.function?.arguments) {
-            console.log('Accumulating arguments:', toolCall.function.arguments);
             accumulatedArguments += toolCall.function.arguments;
           }
         }
         
         // Check if this is the end of the tool call
         if (chunk.choices[0]?.finish_reason === 'tool_calls' && currentToolCall) {
-          console.log('Completed tool call:', {
-            name: currentToolCall,
-            arguments: accumulatedArguments
-          });
-          
           if (currentToolCall === 'addResource') {
             try {
               const params = JSON.parse(accumulatedArguments);
-              console.log('Attempting to create resource with params:', params);
               await createResource({ content: params.content });
-              console.log('Resource created successfully');
             } catch (error) {
               console.error('Error processing addResource tool call:', {
                 error,
                 rawArguments: accumulatedArguments
               });
+              controller.enqueue('Sorry, I encountered an error while retrieving information.');
             }
           } else if (currentToolCall === 'getInformation') {
             try {
               const params = JSON.parse(accumulatedArguments);
-              console.log('Searching for information:', params);
               const relevantContent = await findRelevantContent(params.question);
-              console.log('Found relevant content:', relevantContent);
-              
               // Stream the found information back to the model
               if (relevantContent && relevantContent.length > 0) {
                 controller.enqueue('Based on the stored information: ');
