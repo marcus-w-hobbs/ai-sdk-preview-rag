@@ -13,12 +13,30 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function Chat() {
+  const [toolCall, setToolCall] = useState<string>();
+  const [isToolCallInProgress, setIsToolCallInProgress] = useState(false);
+  
   const { messages, input, handleInputChange, handleSubmit, isLoading } =
     useChat({
-      api: "/api/chat",
+      maxSteps: 4,
+      onToolCall({ toolCall }) {
+        if (!isToolCallInProgress) {
+          setIsToolCallInProgress(true)
+          setToolCall(toolCall.toolName);
+        }
+      },
+      onFinish(message) {
+        setIsToolCallInProgress(false)
+        setToolCall(undefined)
+      },
+      onResponse(response) {
+        // Keep empty to preserve hook structure
+      },
       onError: (error) => {
         console.error('Chat Error:', error)
-        toast.error("An error occurred. Please try again later!");
+        setIsToolCallInProgress(false)
+        setToolCall(undefined)
+        toast.error("You've been rate limited, please try again later!");
       },
     });
 
@@ -28,36 +46,26 @@ export default function Chat() {
     if (messages.length > 0) setIsExpanded(true);
   }, [messages]);
 
-  useEffect(() => {
-    const container = document.querySelector('[data-testid="main-container"]') as HTMLElement;
-    const form = document.querySelector('[data-testid="chat-form"]') as HTMLElement;
-    const input = document.querySelector('[data-testid="chat-input"]') as HTMLElement;
-    
-    if (container && form && input) {
-      console.log('Container styles:', {
-        width: container.offsetWidth,
-        paddingLeft: window.getComputedStyle(container).paddingLeft,
-        paddingRight: window.getComputedStyle(container).paddingRight,
-        maxWidth: window.getComputedStyle(container).maxWidth
-      });
-      
-      console.log('Form styles:', {
-        width: form.offsetWidth,
-        paddingLeft: window.getComputedStyle(form).paddingLeft,
-        paddingRight: window.getComputedStyle(form).paddingRight
-      });
-      
-      console.log('Input styles:', {
-        width: input.offsetWidth,
-        paddingLeft: window.getComputedStyle(input).paddingLeft,
-        paddingRight: window.getComputedStyle(input).paddingRight
-      });
+  const currentToolCall = useMemo(() => {
+    const tools = messages?.slice(-1)[0]?.toolInvocations;
+    if (tools && toolCall === tools[0].toolName) {
+      return tools[0].toolName;
+    } else {
+      return undefined;
     }
-  }, []);
+  }, [toolCall, messages]);
 
   const awaitingResponse = useMemo(() => {
-    return isLoading && messages.slice(-1)[0]?.role === "user";
-  }, [isLoading, messages]);
+    if (
+      isLoading &&
+      currentToolCall === undefined &&
+      messages.slice(-1)[0].role === "user"
+    ) {
+      return true;
+    } else {
+      return false;
+    }
+  }, [isLoading, currentToolCall, messages]);
 
   const userQuery: Message | undefined = messages
     .filter((m) => m.role === "user")
@@ -68,40 +76,64 @@ export default function Chat() {
     .slice(-1)[0];
 
   return (
-    <>
-      <div className="fixed top-0 left-0 w-screen h-16 test-banner flex items-center justify-center">
-        TEST BANNER
-      </div>
-      <div className="min-h-screen bg-red-500 dark:bg-red-800 px-4 py-16">
-        <div className="max-w-[500px] mx-auto space-y-4 bg-green-500">
-          <ProjectOverview />
-          <div className="rounded-lg bg-blue-500 dark:bg-blue-800 p-4">
-            <form onSubmit={handleSubmit} className="bg-yellow-200">
-              <input
-                className="w-full h-10 rounded-md border border-input bg-purple-200 px-3 py-2 text-sm text-neutral-700 dark:bg-purple-800 dark:text-neutral-300 dark:placeholder:text-neutral-400"
-                placeholder="Ask me anything..."
-                value={input}
-                onChange={handleInputChange}
+    <div className="flex justify-center items-start sm:pt-16 min-h-screen w-full dark:bg-neutral-900 px-4 md:px-0 py-4">
+      <div className="flex flex-col items-center w-full max-w-[500px]">
+      <ProjectOverview />
+      <motion.div
+          animate={{
+            minHeight: isExpanded ? 200 : 0,
+            padding: isExpanded ? 12 : 0,
+          }}
+          transition={{
+            type: "spring",
+            bounce: 0.5,
+          }}
+          className={cn(
+            "rounded-lg w-full ",
+            isExpanded
+              ? "bg-neutral-200 dark:bg-neutral-800"
+              : "bg-transparent",
+          )}
+        >
+          <div className="flex flex-col w-full justify-between gap-2">
+            <form onSubmit={handleSubmit} className="flex space-x-2">
+              <Input
+                className={`bg-neutral-100 text-base w-full text-neutral-700 dark:bg-neutral-700 dark:placeholder:text-neutral-400 dark:text-neutral-300`}
                 minLength={3}
                 required
+                value={input}
+                placeholder={"Ask me anything..."}
+                onChange={handleInputChange}
               />
             </form>
-            {(awaitingResponse || lastAssistantMessage) && (
-              <div className="mt-4">
-                <div className="text-sm text-neutral-500 dark:text-neutral-400 mb-2">
-                  {userQuery?.content}
-                </div>
-                {awaitingResponse ? (
-                  <Loading />
-                ) : (
-                  <AssistantMessage message={lastAssistantMessage} />
-                )}
-              </div>
-            )}
+            <motion.div
+              transition={{
+                type: "spring",
+              }}
+              className="min-h-fit flex flex-col gap-2"
+            >
+              <AnimatePresence>
+                {awaitingResponse || currentToolCall ? (
+                  <div className="px-2 min-h-12">
+                    <div className="dark:text-neutral-400 text-neutral-500 text-sm w-fit mb-1">
+                      {userQuery.content}
+                    </div>
+                    <Loading tool={currentToolCall} />
+                  </div>
+                ) : lastAssistantMessage ? (
+                  <div className="px-2 min-h-12">
+                    <div className="dark:text-neutral-400 text-neutral-500 text-sm w-fit mb-1">
+                      {userQuery.content}
+                    </div>
+                    <AssistantMessage message={lastAssistantMessage} />
+                  </div>
+                ) : null}
+              </AnimatePresence>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -128,7 +160,14 @@ const AssistantMessage = ({ message }: { message: Message | undefined }) => {
   );
 };
 
-const Loading = () => {
+const Loading = ({ tool }: { tool?: string }) => {
+  const toolName =
+    tool === "getInformation"
+      ? "Getting information"
+      : tool === "addResource"
+        ? "Adding information"
+        : "Thinking";
+
   return (
     <AnimatePresence mode="wait">
       <motion.div
@@ -143,7 +182,7 @@ const Loading = () => {
             <LoadingIcon />
           </div>
           <div className="text-neutral-500 dark:text-neutral-400 text-sm">
-            Thinking...
+            {toolName}...
           </div>
         </div>
       </motion.div>
